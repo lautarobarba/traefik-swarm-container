@@ -23,9 +23,9 @@ services:
 
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./traefik.yml:/etc/traefik/traefik.yml:ro
-      - ./dynamic:/etc/traefik/dynamic:ro
-      - ./letsencrypt:/letsencrypt
+      - /home/lautaro/Desarrollo/traefik-swarm-container/traefik.yml:/etc/traefik/traefik.yml:ro
+      - /home/lautaro/Desarrollo/traefik-swarm-container/dynamic:/etc/traefik/dynamic:ro
+      - /home/lautaro/Desarrollo/traefik-swarm-container/letsencrypt:/letsencrypt
 
     networks:
       - traefik-network
