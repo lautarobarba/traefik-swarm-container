@@ -2,3 +2,12 @@ tls:
   certificates:
     - certFile: /certs/homelab.local.crt
       keyFile: /certs/homelab.local.key
+
+http:
+  routers:
+    traefik-dashboard:
+      rule: Host(`traefik.homelab.local`)
+      service: api@internal
+      entryPoints:
+        - websecure
+      tls: {}
