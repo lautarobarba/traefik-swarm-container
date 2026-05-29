@@ -26,6 +26,7 @@ docker service logs -f traefik_traefik
 ```
 
 # Publicar apps en la red
+
 ```bash
 services:
 
@@ -51,7 +52,6 @@ networks:
     external: true
 ```
 
-
 ## Dashboard protegido
 
 Nunca dejar:
@@ -64,7 +64,6 @@ en producción.
 
 Idealmente:
 
-* basic auth
-* VPN
-* whitelist IP
-
+- basic auth
+- VPN
+- whitelist IP

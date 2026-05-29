@@ -1,12 +1,12 @@
 api:
   dashboard: true
-  insecure: true
+  # insecure: true
 
 log:
-  level: INFO
+  # level: INFO
+  level: DEBUG
 
 entryPoints:
-
   web:
     address: ":80"
 
@@ -20,9 +20,9 @@ entryPoints:
     address: ":443"
 
 providers:
-
-  swarm:
+  docker:
     endpoint: "unix:///var/run/docker.sock"
+    swarmMode: true
     exposedByDefault: false
 
   file:
@@ -30,11 +30,9 @@ providers:
     watch: true
 
 certificatesResolvers:
-
   letsencrypt:
     acme:
-
-      email: admin@midominio.com
+      email: lautaro.barba.94@gmail.com
 
       storage: /letsencrypt/acme.json
 

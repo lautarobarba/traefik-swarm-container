@@ -26,6 +26,7 @@ services:
       - /home/lautaro/Desarrollo/traefik-swarm-container/traefik.yml:/etc/traefik/traefik.yml:ro
       - /home/lautaro/Desarrollo/traefik-swarm-container/dynamic:/etc/traefik/dynamic:ro
       - /home/lautaro/Desarrollo/traefik-swarm-container/letsencrypt:/letsencrypt
+      - /home/lautaro/Desarrollo/traefik-swarm-container/certs:/certs:ro
 
     networks:
       - traefik-network
@@ -42,10 +43,12 @@ services:
         - traefik.enable=true
 
         # Dashboard
-        - traefik.http.routers.traefik.rule=Host(`traefik.midominio.com`)
+        - traefik.http.routers.traefik.rule=Host(`traefik.homelab.local`)
         - traefik.http.routers.traefik.service=api@internal
         - traefik.http.routers.traefik.entrypoints=websecure
-        - traefik.http.routers.traefik.tls.certresolver=letsencrypt
+        # Enable letsencrypt para generar los certificados ssl
+        # - traefik.http.routers.traefik.tls.certresolver=letsencrypt
+        - traefik.http.routers.traefik.tls=true
 
 networks:
   traefik-network:
