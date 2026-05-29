@@ -15,6 +15,24 @@ Traefik se ejecuta como servicio en Docker Swarm, actuando como punto de entrada
 
 - Docker Swarm inicializado (`docker swarm init`)
 - Acceso al nodo manager del swarm
+- NFS (u otro storage compartido) montado en **todos los nodos** en `/mnt/fake_nfs/media/`
+
+## Estructura de datos en NFS
+
+Todos los archivos de configuración viven en el NFS para que Swarm pueda reschedular el contenedor en cualquier nodo sin perder estado.
+
+```
+/mnt/fake_nfs/media/traefik/
+└── data/
+    ├── traefik.yml          # Configuración principal de Traefik
+    ├── dynamic/
+    │   └── tls.yml          # Configuración dinámica (TLS, dashboard)
+    ├── certs/
+    │   ├── homelab.local.crt
+    │   └── homelab.local.key
+    └── letsencrypt/
+        └── acme.json        # Almacenamiento de certificados ACME
+```
 
 ## Setup
 
@@ -27,30 +45,48 @@ docker network create \
   traefik-network
 ```
 
-### 2. Configurar Let's Encrypt
+### 2. Crear la estructura de directorios en el NFS
 
 ```bash
-mkdir -p letsencrypt
-touch letsencrypt/acme.json
-chmod 600 letsencrypt/acme.json
+mkdir -p /mnt/fake_nfs/media/traefik/data/{dynamic,certs,letsencrypt}
 ```
 
-### 3. Certificados locales (opcional)
+### 3. Configurar Let's Encrypt
 
-Los certificados para dominios locales (ej. `homelab.local`) van en `certs/`:
+```bash
+touch /mnt/fake_nfs/media/traefik/data/letsencrypt/acme.json
+chmod 600 /mnt/fake_nfs/media/traefik/data/letsencrypt/acme.json
+```
 
-- `certs/homelab.local.crt`
-- `certs/homelab.local.key`
+> **Nota:** Con `replicas: 1` no hay escrituras concurrentes sobre `acme.json`, por lo que no se necesita un backend externo como Redis.
 
-El archivo `dynamic/tls.yml` referencia estos certificados.
+### 4. Copiar los archivos de configuración al NFS
 
-### 4. Desplegar el stack
+La carpeta `examples/` del repositorio contiene plantillas base para ambos archivos. Copiarlos y ajustar según el entorno:
+
+```bash
+cp examples/traefik.yml /mnt/fake_nfs/media/traefik/data/traefik.yml
+cp examples/tls.yml /mnt/fake_nfs/media/traefik/data/dynamic/tls.yml
+```
+
+### 5. Certificados locales (opcional)
+
+Para dominios locales (ej. `homelab.local`), copiar los certificados al NFS:
+
+```bash
+cp homelab.local.crt /mnt/fake_nfs/media/traefik/data/certs/
+cp homelab.local.key /mnt/fake_nfs/media/traefik/data/certs/
+```
+
+El archivo `dynamic/tls.yml` los referencia desde `/certs/`.
+
+### 6. Desplegar el stack
 
 ```bash
 docker stack deploy -c compose.yaml traefik
 ```
 
-### 5. Verificar
+### 7. Verificar
 
 ```bash
 docker service ls
@@ -84,14 +120,23 @@ networks:
 
 ## Estructura del proyecto
 
-| Archivo/Dir | Propósito |
-|-------------|-----------|
-| `compose.yaml` | Stack de Docker Swarm para Traefik |
-| `traefik.yml` | Configuración principal (entrypoints, providers, ACME) |
-| `dynamic/` | Configuración dinámica (TLS, routers estáticos) |
-| `dynamic/tls.yml` | Certificados locales y router del dashboard |
-| `letsencrypt/` | Almacenamiento de certificados ACME |
-| `certs/` | Certificados locales (.crt + .key) |
+**Repositorio** (solo configuración de Swarm):
+
+| Archivo                | Propósito                                            |
+| ---------------------- | ---------------------------------------------------- |
+| `compose.yaml`         | Stack de Docker Swarm para Traefik                   |
+| `examples/traefik.yml` | Plantilla de configuración principal de Traefik      |
+| `examples/tls.yml`     | Plantilla de configuración dinámica (TLS, dashboard) |
+
+**NFS** (`/mnt/fake_nfs/media/traefik/data/`):
+
+| Archivo/Dir             | Propósito                                              |
+| ----------------------- | ------------------------------------------------------ |
+| `traefik.yml`           | Configuración principal (entrypoints, providers, ACME) |
+| `dynamic/tls.yml`       | Certificados locales y router del dashboard            |
+| `letsencrypt/acme.json` | Almacenamiento de certificados ACME (permisos `600`)   |
+| `certs/*.crt`           | Certificados locales                                   |
+| `certs/*.key`           | Claves privadas de certificados locales                |
 
 ## Seguridad
 
@@ -107,8 +152,8 @@ Opciones recomendadas:
 
 ### Certificados
 
-- `letsencrypt/acme.json` debe tener permisos `600`
-- Los certificados locales en `certs/` están en `.gitignore` (no commitear keys)
+- `letsencrypt/acme.json` debe tener permisos `600` (`chmod 600`)
+- Los certificados locales en `certs/` no deben commitearse; el repo solo contiene `compose.yaml`
 
 ## Troubleshooting
 
