@@ -20,7 +20,7 @@ entryPoints:
     address: ":443"
 
 providers:
-  docker:
+  swarm:
     endpoint: "unix:///var/run/docker.sock"
     exposedByDefault: false
 
