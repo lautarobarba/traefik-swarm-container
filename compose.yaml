@@ -1,6 +1,6 @@
 services:
   traefik:
-    image: traefik:v3.7.5
+    image: traefik:v3.7.6
 
     command:
       - --configFile=/etc/traefik/traefik.yml
@@ -23,19 +23,18 @@ services:
 
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /mnt/fake_nfs/media/traefik/data/traefik.yml:/etc/traefik/traefik.yml:ro
-      - /mnt/fake_nfs/media/traefik/data/dynamic:/etc/traefik/dynamic:ro
-      - /mnt/fake_nfs/media/traefik/data/certs:/certs:ro
-      - /mnt/fake_nfs/media/traefik/data/letsencrypt:/letsencrypt
+      - traefik-config:/etc/traefik:ro
+      - traefik-certs:/certs:ro
+      - traefik-letsencrypt:/letsencrypt
 
     networks:
       - traefik-network
 
     deploy:
-      replicas: 1
-      placement:
-        constraints:
-          - node.role == manager
+      mode: global
+      # placement:
+      #   constraints:
+      #     - node.role == manager
 
       restart_policy:
         condition: any
@@ -46,3 +45,24 @@ services:
 networks:
   traefik-network:
     external: true
+
+volumes:
+  # Reemplazar addr=127.0.0.1 para pruebas locales
+  traefik-config:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: "addr=127.0.0.1,ro,nfsvers=4"
+      device: ":/srv/nfs/traefik/data"
+  traefik-certs:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: "addr=127.0.0.1,ro,nfsvers=4"
+      device: ":/srv/nfs/traefik/data/certs"
+  traefik-letsencrypt:
+    driver: local
+    driver_opts:
+      type: nfs
+      o: "addr=127.0.0.1,rw,nfsvers=4"
+      device: ":/srv/nfs/traefik/data/letsencrypt"

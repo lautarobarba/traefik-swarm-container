@@ -15,14 +15,14 @@ Traefik se ejecuta como servicio en Docker Swarm, actuando como punto de entrada
 
 - Docker Swarm inicializado (`docker swarm init`)
 - Acceso al nodo manager del swarm
-- NFS (u otro storage compartido) montado en **todos los nodos** en `/mnt/fake_nfs/media/`
+- NFS (u otro storage compartido). Crear una carpeta disponible compartida /srv/nfs/traefik **NFS_PATH**.
 
 ## Estructura de datos en NFS
 
 Todos los archivos de configuración viven en el NFS para que Swarm pueda reschedular el contenedor en cualquier nodo sin perder estado.
 
 ```
-/mnt/fake_nfs/media/traefik/
+/srv/nfs/traefik/
 └── data/
     ├── traefik.yml          # Configuración principal de Traefik
     ├── dynamic/
@@ -48,25 +48,89 @@ docker network create \
 ### 2. Crear la estructura de directorios en el NFS
 
 ```bash
-mkdir -p /mnt/fake_nfs/media/traefik/data/{dynamic,certs,letsencrypt}
+mkdir -p /srv/nfs/traefik/data/{dynamic,certs,letsencrypt}
 ```
 
 ### 3. Configurar Let's Encrypt
 
 ```bash
-touch /mnt/fake_nfs/media/traefik/data/letsencrypt/acme.json
-chmod 600 /mnt/fake_nfs/media/traefik/data/letsencrypt/acme.json
+touch /srv/nfs/traefik/data/letsencrypt/acme.json
+chmod 600 /srv/nfs/traefik/data/letsencrypt/acme.json
 ```
 
 > **Nota:** Con `replicas: 1` no hay escrituras concurrentes sobre `acme.json`, por lo que no se necesita un backend externo como Redis.
 
 ### 4. Copiar los archivos de configuración al NFS
 
-La carpeta `examples/` del repositorio contiene plantillas base para ambos archivos. Copiarlos y ajustar según el entorno:
+Crear los archivos de configuraciones y ajustar según el entorno:
 
 ```bash
-cp examples/traefik.yml /mnt/fake_nfs/media/traefik/data/traefik.yml
-cp examples/tls.yml /mnt/fake_nfs/media/traefik/data/dynamic/tls.yml
+touch /srv/nfs/traefik/data/traefik.yml
+nano /srv/nfs/traefik/data/traefik.yml
+```
+
+```yaml
+# /srv/nfs/traefik/data/traefik.yml
+api:
+  dashboard: true
+  # insecure: true
+
+log:
+  # level: INFO
+  level: DEBUG
+
+entryPoints:
+  web:
+    address: ":80"
+
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+
+  websecure:
+    address: ":443"
+
+providers:
+  swarm:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+
+  file:
+    directory: /etc/traefik/dynamic
+    watch: true
+
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: email@gmail.com
+      storage: /letsencrypt/acme.json
+
+      httpChallenge:
+        entryPoint: web
+```
+
+```bash
+touch /srv/nfs/traefik/data/dynamic/tls.yml
+nano /srv/nfs/traefik/data/dynamic/tls.yml
+```
+
+```yaml
+# /srv/nfs/traefik/data/dynamic/tls.yml
+tls:
+  certificates:
+    - certFile: /certs/example.local.crt
+      keyFile: /certs/example.local.key
+
+http:
+  routers:
+    traefik-dashboard:
+      rule: Host(`traefik.local`)
+      service: api@internal
+      entryPoints:
+        - websecure
+      tls: {}
 ```
 
 ### 5. Certificados locales (opcional)
@@ -74,19 +138,25 @@ cp examples/tls.yml /mnt/fake_nfs/media/traefik/data/dynamic/tls.yml
 Para dominios locales (ej. `homelab.local`), copiar los certificados al NFS:
 
 ```bash
-cp homelab.local.crt /mnt/fake_nfs/media/traefik/data/certs/
-cp homelab.local.key /mnt/fake_nfs/media/traefik/data/certs/
+cp homelab.local.crt /srv/nfs/traefik/data/certs/
+cp homelab.local.key /srv/nfs/traefik/data/certs/
 ```
 
 El archivo `dynamic/tls.yml` los referencia desde `/certs/`.
 
-### 6. Desplegar el stack
+### 6. Actualizar owner de archivos
+
+```bash
+chown -R nobody:nogroup /srv/nfs/traefik
+```
+
+### 7. Desplegar el stack
 
 ```bash
 docker stack deploy -c compose.yaml traefik
 ```
 
-### 7. Verificar
+### 8. Verificar
 
 ```bash
 docker service ls
@@ -128,7 +198,7 @@ networks:
 | `examples/traefik.yml` | Plantilla de configuración principal de Traefik      |
 | `examples/tls.yml`     | Plantilla de configuración dinámica (TLS, dashboard) |
 
-**NFS** (`/mnt/fake_nfs/media/traefik/data/`):
+**NFS** (`/srv/nfs/traefik/data/`):
 
 | Archivo/Dir             | Propósito                                              |
 | ----------------------- | ------------------------------------------------------ |

@@ -31,7 +31,7 @@ providers:
 certificatesResolvers:
   letsencrypt:
     acme:
-      email: lautaro.barba.94@gmail.com
+      email: email@gmail.com
 
       storage: /letsencrypt/acme.json
 
