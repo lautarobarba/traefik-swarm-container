@@ -23,12 +23,12 @@ services:
 
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - traefik-config:/etc/traefik:ro
-      - traefik-certs:/certs:ro
-      - traefik-letsencrypt:/letsencrypt
+      - traefik_config:/etc/traefik:ro
+      - traefik_certs:/certs:ro
+      - traefik_letsencrypt:/letsencrypt
 
     networks:
-      - traefik-network
+      - traefik_network
 
     deploy:
       mode: global
@@ -43,24 +43,24 @@ services:
         - traefik.enable=true
 
 networks:
-  traefik-network:
+  traefik_network:
     external: true
 
 volumes:
   # Reemplazar addr=127.0.0.1 para pruebas locales
-  traefik-config:
+  traefik_config:
     driver: local
     driver_opts:
       type: nfs
       o: "addr=127.0.0.1,ro,nfsvers=4"
       device: ":/srv/nfs/traefik/data"
-  traefik-certs:
+  traefik_certs:
     driver: local
     driver_opts:
       type: nfs
       o: "addr=127.0.0.1,ro,nfsvers=4"
       device: ":/srv/nfs/traefik/data/certs"
-  traefik-letsencrypt:
+  traefik_letsencrypt:
     driver: local
     driver_opts:
       type: nfs

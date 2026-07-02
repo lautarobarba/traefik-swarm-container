@@ -6,7 +6,7 @@ tls:
 http:
   routers:
     traefik-dashboard:
-      rule: Host(`traefik.local`)
+      rule: Host(`traefik.homelab.local`)
       service: api@internal
       entryPoints:
         - websecure

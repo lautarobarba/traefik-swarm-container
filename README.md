@@ -42,7 +42,7 @@ Todos los archivos de configuración viven en el NFS para que Swarm pueda resche
 docker network create \
   --driver=overlay \
   --attachable \
-  traefik-network
+  traefik_network
 ```
 
 ### 2. Crear la estructura de directorios en el NFS
@@ -120,13 +120,13 @@ nano /srv/nfs/traefik/data/dynamic/tls.yml
 # /srv/nfs/traefik/data/dynamic/tls.yml
 tls:
   certificates:
-    - certFile: /certs/example.local.crt
-      keyFile: /certs/example.local.key
+    - certFile: /certs/homelab.local.crt
+      keyFile: /certs/homelab.local.key
 
 http:
   routers:
     traefik-dashboard:
-      rule: Host(`traefik.local`)
+      rule: Host(`traefik.homelab.local`)
       service: api@internal
       entryPoints:
         - websecure
@@ -173,7 +173,7 @@ services:
     image: nginx
 
     networks:
-      - traefik-network
+      - traefik_network
 
     deploy:
       labels:
@@ -184,7 +184,7 @@ services:
         - traefik.http.services.app.loadbalancer.server.port=80
 
 networks:
-  traefik-network:
+  traefik_network:
     external: true
 ```
 
@@ -230,7 +230,7 @@ Opciones recomendadas:
 ### Traefik no detecta servicios
 
 - Verificar que el servicio tenga `traefik.enable=true`
-- Confirmar que la red `traefik-network` existe y es externa
+- Confirmar que la red `traefik_network` existe y es externa
 - Revisar logs: `docker service logs -f traefik_traefik`
 
 ### Certificados Let's Encrypt no se generan
